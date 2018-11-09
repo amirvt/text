@@ -538,6 +538,7 @@ class NestedField(Field):
         old_init_token = self.init_token
         old_eos_token = self.eos_token
         old_fix_len = self.nesting_field.fix_length
+
         # Monkeypatch the attributes
         if self.nesting_field.fix_length is None:
             max_len = max(len(xs) for ex in minibatch for xs in ex)
@@ -553,6 +554,7 @@ class NestedField(Field):
             self.eos_token = [self.eos_token]
         # Do padding
         old_include_lengths = self.include_lengths
+        old_nested_include_lengths = self.nesting_field.include_lengths
         self.include_lengths = True
         self.nesting_field.include_lengths = True
         padded, sentence_lengths = super(NestedField, self).pad(minibatch)
@@ -584,6 +586,7 @@ class NestedField(Field):
         self.init_token = old_init_token
         self.eos_token = old_eos_token
         self.include_lengths = old_include_lengths
+        self.nesting_field.include_lengths = old_nested_include_lengths
         if self.include_lengths:
             return padded, sentence_lengths, word_lengths
         return padded
@@ -648,6 +651,7 @@ class NestedField(Field):
                 If left as default, the tensors will be created on cpu. Default: None.
         """
         numericalized = []
+        old_nested_include_lengths = self.nesting_field.include_lengths
         self.nesting_field.include_lengths = False
         if self.include_lengths:
             arrs, sentence_lengths, word_lengths = arrs
@@ -658,7 +662,8 @@ class NestedField(Field):
             numericalized.append(numericalized_ex)
         padded_batch = torch.stack(numericalized)
 
-        self.nesting_field.include_lengths = True
+        # self.nesting_field.include_lengths = True
+        self.nesting_field.include_lengths = old_nested_include_lengths
         if self.include_lengths:
             sentence_lengths = torch.LongTensor(sentence_lengths, device=device)
             word_lengths = torch.LongTensor(word_lengths, device=device)
